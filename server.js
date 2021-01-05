@@ -2,7 +2,11 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
-const User = require('./models/userModel')
+const bcrypt = require('bcryptjs');
+
+const User = require('./models/userModel');
+const Blogpost = require('./models/blogpostModel');
+const { RSA_NO_PADDING } = require('constants');
 
 const app = express();
 dotenv.config({path: './.env'});
@@ -40,12 +44,15 @@ app.get('/register', (req, res) => {
     res.render('register')
 });
 
-app.post('/register', async (req, res) =>{
+app.post('/register', async (req, res) => {
+
+    const hashedPassword = await bcrypt.hash(req.body.userPassword, 8);
+    console.log(hashedPassword)
 
     await User.create({
         name: req.body.userName, 
         email: req.body.userEmail,
-        password: req.body.userPassword
+        password: hashedPassword
     });
 
     res.send("user registered")
@@ -101,8 +108,64 @@ app.post("/delete/:id", async (req, res) => {
         res.send("unable to delete")
     }
    
+});
+
+app.get("/blogpost/:id", (req, res) => {
+    console.log(req.params.id)
+    res.render("blogpost", {
+        userId: req.params.id
+    });
+});
+
+app.post("/blogpost/:id", async (req, res) => {
+    console.log(req.params.id)
+    try {
+        await Blogpost.create({
+            title: req.body.postTitle,
+            body: req.body.postBody,
+            user: req.params.id
+        });
+
+        res.send("post created")
+
+    } catch (error) {
+
+        res.send(error)
+
+    }
+
 
 });
+
+app.get("/allPosts/:id", async (req, res) => {
+
+    const allPosts = await Blogpost.find({user:req.params.id}).populate('user', 'name email')
+    const user = await User.find({_id: req.params.id})
+ 
+    console.log(allPosts)
+    console.log(user)
+    res.render("userBlogPosts", {
+        allPosts: allPosts,
+        user: user
+
+    });
+});
+
+app.get("/login", (req, res) => {
+    res.render('login');
+});
+
+app.post("/login", async (req, res) => {
+    const user = await User.findOne({email:req.body.userEmail});
+
+    const isMatch = await bcrypt.compare(req.body.userPassword, user.password );
+
+    if (isMatch) {
+        res.send("You are logged in")
+    } else {
+        res.send("your login details are incorrect")
+    }
+})
 
 app.get('/*', (req, res) => {
     res.send("page not found")
