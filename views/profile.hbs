@@ -11,8 +11,13 @@
     <h3>Email:{{user.email}}</h3>
     <h3>Password:{{user.password}}</h3>
 
+    <a href="/blogpost/{{user._id}}">Create New Post</a>
+    <a href="/allPosts/{{user._id}}">All posts</a>
+
+
     <form action="/delete/{{user._id}}" method="POST">
         <button type="submit">Delete User</button>
     </form>
+
 </body>
 </html>
