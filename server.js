@@ -33,14 +33,22 @@ app.use(cookieParser())
 app.use(express.urlencoded({extended: false}));
 app.use(express.json({extended: false}));
 
-app.get('/', async (req, res) => {
+app.get('/', auth.isLoggedIn, async (req, res) => {
 
-    // state the model - User then the method - find()
-    const usersDB = await User.find();
+    // checks if the logged in user has 'true' as value of admin
+    if (req.userFound && req.userFound.admin){
+        console.log("user is logged in")
+        const usersDB = await User.find();
 
-    res.render('index', {
+        res.render('index', {
         users: usersDB
     });
+
+    } else {
+        res.send("welcome to the homepage")
+    }
+    // state the model - User then the method - find()
+    
 });
 
 app.get('/register', (req, res) => {
@@ -61,21 +69,24 @@ app.post('/register', async (req, res) => {
     res.send("user registered")
 });
 
-app.get('/profile/:id', auth.isLoggedIn, async (req, res) => {
-    
+app.get('/profile', auth.isLoggedIn, async (req, res) => {
+    // can only display your user profile if logged in 
     try {
-        console.log("got username from auth middleware")
-
-        // use this if getting from url parameter
-        // const userDB = await User.findById(req.params.id);
 
         // getting user from middleware
-        const userDB = req.userFound
-        console.log(userDB)
+        if(req.userFound){
+            const userDB = req.userFound
+            console.log("got username from auth middleware")
+            console.log(userDB)
+    
+            res.render("profile", {
+                user: userDB
+            })
 
-        res.render("profile", {
-            user: userDB
-        })
+        } else {
+            res.send("you are not logged in")
+        }
+
     } catch (error) {
         res.send("user not found")
     }
@@ -180,6 +191,7 @@ app.post("/login", async (req, res) => {
             httpOnly:true
         }
 
+        // save cookie on the browser
         res.cookie('jwt', token, cookieOptions)
 
         console.log(token)
@@ -187,6 +199,11 @@ app.post("/login", async (req, res) => {
     } else {
         res.send("your login details are incorrect")
     }
+});
+
+// delete cookie on logout
+app.get("/logout", auth.logout, (req, res) => {
+    res.send("You are logged out");
 });
 
 app.get('/*', (req, res) => {
