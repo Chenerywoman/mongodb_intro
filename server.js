@@ -5,7 +5,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-
+const auth = require('./middleware/auth');
 
 const User = require('./models/userModel');
 const Blogpost = require('./models/blogpostModel');
@@ -61,11 +61,18 @@ app.post('/register', async (req, res) => {
     res.send("user registered")
 });
 
-app.get('/profile/:id', async (req, res) => {
-
+app.get('/profile/:id', auth.isLoggedIn, async (req, res) => {
+    
     try {
-        const userDB = await User.findById(req.params.id);
+        console.log("got username from auth middleware")
+
+        // use this if getting from url parameter
+        // const userDB = await User.findById(req.params.id);
+
+        // getting user from middleware
+        const userDB = req.userFound
         console.log(userDB)
+
         res.render("profile", {
             user: userDB
         })
