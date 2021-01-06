@@ -3,10 +3,12 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
+
 
 const User = require('./models/userModel');
 const Blogpost = require('./models/blogpostModel');
-const { RSA_NO_PADDING } = require('constants');
 
 const app = express();
 dotenv.config({path: './.env'});
@@ -25,6 +27,7 @@ const publicDirectory = path.join(__dirname, '/public');
 app.set('views', viewsPath);
 app.set('view engine', 'hbs');
 app.use(express.static(publicDirectory));
+app.use(cookieParser())
 
 // allows passing of data 
 app.use(express.urlencoded({extended: false}));
@@ -134,7 +137,6 @@ app.post("/blogpost/:id", async (req, res) => {
 
     }
 
-
 });
 
 app.get("/allPosts/:id", async (req, res) => {
@@ -161,11 +163,24 @@ app.post("/login", async (req, res) => {
     const isMatch = await bcrypt.compare(req.body.userPassword, user.password );
 
     if (isMatch) {
+        const token = jwt.sign({id: user._id}, process.env.JWT_SECRET, {expiresIn: process.env.JWT_EXPRESS_IN});
+
+        const cookieOptions = {
+            expires: new Date(
+                // converts no. of days to milliseconds
+                Date.now() + process.env.JWT_COOKIE_EXPIRES * 24 * 60 * 60 * 1000
+            ),
+            httpOnly:true
+        }
+
+        res.cookie('jwt', token, cookieOptions)
+
+        console.log(token)
         res.send("You are logged in")
     } else {
         res.send("your login details are incorrect")
     }
-})
+});
 
 app.get('/*', (req, res) => {
     res.send("page not found")
